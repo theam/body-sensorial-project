@@ -1,0 +1,14 @@
+resolver: lts-9.0
+
+packages:
+- location: '.'
+- extra-dep: true
+  location:
+    git: 'https://github.com/ejconlon/analyze.git'
+    commit: 'b38eef0b735c01504980a155187517992a77f1f6'
+
+extra-deps: []
+
+flags: {}
+
+extra-package-dbs: []
