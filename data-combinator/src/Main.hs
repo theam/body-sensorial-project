@@ -19,12 +19,12 @@ main = do
                    "Combine multiple CSV files from a patient into a single one"
                    (combineCSV "../data")
                    (strOption (long "header"))
-        addCommand "wav"
-                   "Combine multiple WAV files from a patient into a single WAV"
-                   (combineWAV "../data")
+        addCommand "flac"
+                   "Combine multiple FLAC files from a patient into a single WAV"
+                   (combineFLAC "../data")
                    (strOption (long "header"))
   runCmd
 
-combineCSV, combineWAV :: Prelude.String -> Prelude.String -> IO ()
+combineCSV, combineFLAC :: Prelude.String -> Prelude.String -> IO ()
 combineCSV dataDir filesHeader = DataCombinator.combineCSV (fromList dataDir) (fromList filesHeader)
-combineWAV dataDir filesHeader = DataCombinator.combineWAV (fromList dataDir) (fromList filesHeader)
+combineFLAC dataDir filesHeader = DataCombinator.combineFLAC (fromList dataDir) (fromList filesHeader)

@@ -23,6 +23,7 @@ dependencies:
   - exceptions
   - bytestring
   - WAVE
+  - process
 
 default-extensions:
   - NoImplicitPrelude

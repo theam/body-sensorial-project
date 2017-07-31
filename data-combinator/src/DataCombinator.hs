@@ -5,7 +5,7 @@ import Foundation.Collection
 
 import qualified Analyze.Csv as Analyze
 import qualified Data.ByteString.Lazy as LazyByteString
-import qualified Data.WAVE as Wave
+import qualified System.Process as System
 
 import qualified DataCombinator.Csv as CsvCombinator
 import qualified DataCombinator.Wav as WavCombinator
@@ -41,11 +41,16 @@ combineCSV datadir header = do
   
 
 
-combineWAV :: String -> String -> IO ()
-combineWAV datadir header = do
+combineFLAC :: String -> String -> IO ()
+combineFLAC datadir header = do
     let fileNames = fmap prependPath soundFiles
-    wavs <- mapM Wave.getWAVEFile fileNames
-    combinedWav <- WavCombinator.combine $ nonEmpty_ wavs
-    Wave.putWAVEFile (prependPath "combined") combinedWav
+    mapM_ convertToWav fileNames
+    combineWavs
+    deleteWavs
   where
-    prependPath file = toList ( datadir <> "/" <> header <> file <> ".wav")
+    prependPath file = datadir <> "/" <> header <> file <> ".flac"
+    combineWavs = System.callCommand ( toList ("cd " <> datadir <> " && sox *.wav " <> header <> "combined.wav"))
+    deleteWavs = System.callCommand ( toList ("cd " <> datadir <> " && rm -f *.flac.wav"))
+
+convertToWav :: String -> IO ()
+convertToWav file = System.callCommand ( toList ("ffmpeg -y -i \"" <> file <> "\" \"" <> file <> ".wav\"" ))
