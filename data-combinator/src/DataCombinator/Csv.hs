@@ -16,11 +16,9 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 
 combine :: NonEmpty [RFrame Text Text] -> IO (RFrame Text Text)
-combine frames
-  = foldM extend (head frames) (tail frames)
-  & fmap (f "elapsed (s)")
- where
-  f = error "Sort not implemented"
+combine frames = do
+  x <- foldM extend (head frames) (tail frames)
+  return x
 
 
 
@@ -38,10 +36,24 @@ extend :: RFrame Text Text -> RFrame Text Text -> IO (RFrame Text Text)
 extend a b = do
   let aKeys = Analyze.rframeKeys a
   let bKeys = Analyze.rframeKeys b
-  let aNewKeys = Vector.filter (not . (`Vector.elem` aKeys)) (Analyze.rframeKeys a)
-  let bNewKeys = Vector.filter (not . (`Vector.elem` bKeys)) (Analyze.rframeKeys b)
+  putStrLn "Getting A new keys"
+  let aNewKeys = Vector.filter (not . (`Vector.elem` bKeys)) (Analyze.rframeKeys a)
+  putStrLn $ show $ aNewKeys
+  putStrLn "Getting B new keys"
+  let bNewKeys = Vector.filter (not . (`Vector.elem` aKeys)) (Analyze.rframeKeys b)
+  putStrLn $ show $ bNewKeys
+  putStrLn "Extending A"
   extendedA <- foldM newEmptyColumn a bNewKeys
+  putStrLn "Extending B"
   extendedB <- foldM newEmptyColumn b aNewKeys
-  Analyze.appendRows extendedA extendedB
+  putStrLn $ show $ Analyze.rframeKeys extendedA
+  putStrLn $ show $ Analyze.rframeKeys extendedB
+  xtended <- Analyze.appendRows extendedA extendedB
+  putStrLn "-----------------------------------------"
+  putStrLn $ "[ LENGTH: " <> (show $ Analyze.numRows xtended) <> " ]"
+  putStrLn $ show $ Analyze.rframeKeys xtended
+  -- Vector.mapM_ (putStrLn . show) $ Analyze.rframeData xtended
+  putStrLn "-----------------------------------------"
+  return xtended
  where
   newEmptyColumn frame newKey = Analyze.addColumn frame newKey (Vector.replicate (Analyze.numRows frame) "")

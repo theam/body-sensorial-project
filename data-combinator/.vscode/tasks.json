@@ -4,13 +4,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "taskName": "Stack build",
-            "command": "stack build",
+            "taskName": "Stack build with R",
+            "command": "stack build --extra-lib-dirs=$env:R_LIB_DIRS --extra-include-dirs=$env:R_INCLUDE_DIRS",
             "type": "shell",
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "problemMatcher": []
         }
     ]
 }
