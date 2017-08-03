@@ -10,7 +10,7 @@ import qualified DataCombinator
 main :: IO ()
 main = do
   (_, runCmd) <-
-    simpleOptions 
+    simpleOptions
       "v1.0.0"
       "Patient data combinator"
       "Combines raw CSV and FLAC files into individual CSV and WAV files"
