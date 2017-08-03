@@ -6,7 +6,7 @@ homepage:            https://github.com/theam/body-sensorial-project
 license:             Apache-2.0
 author:              Theam
 maintainer:          nick@theam.io
-copyright:           2017 The Agile Monkeys S.L.
+copyright:           2017 Theam
 category:            Web
 extra-source-files:
 - README.md
