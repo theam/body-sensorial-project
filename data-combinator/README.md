@@ -8,6 +8,7 @@ On an Ubuntu system:
 After installing that, get into an `R` prompt and issue:
 
 `install.packages('data.table')`
+`install.packages('zoo')`
 
 
 ## Usage:
