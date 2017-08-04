@@ -36,7 +36,9 @@ combineCSV :: String -> String -> IO ()
 combineCSV datadir header = do
     let (gyr : acc : mag : prs : tmp : []) = (toList . prependPath) <$> sensorFiles
     let output = (toList . prependPath) $ "combined"
-    [r| require("data.table")
+    [r|
+        require("data.table")
+        require("zoo")
 
         gyr <- fread(gyr_hs)
         acc <- fread(acc_hs)
@@ -62,20 +64,32 @@ combineCSV datadir header = do
 
         total <- total[order(elapsed)]
 
-        repeatBefore = function (x) {
-            ind = which(!is.na(x))
-            if(is.na(x[1]))
-                ind = c(1, ind)
-            rep(x[ind], times = diff(c(ind, length(x) + 1)))
-        }
+        total <- na.locf(total)
 
-        total <- sapply(total, repeatBefore)
+        NA2mean <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
 
-        write.csv(x=total, file=output_hs, na="0")
+        nm <- names(total)[colSums(is.na(total)) != 0]
+
+        total[, (nm) := lapply(nm, function(x) {
+            x <- get(x)
+            x[is.na(x)] <- mean(x, na.rm = TRUE)
+            x
+        })]
+
+        x <- sapply(total[, 3:14], NA2mean)
+
+        write.csv(x=total, file="/tmp/tempdata.csv", quote=FALSE)
     |]
-    return ()
+    tempdata <-
+         Analyze.loadCSVFileWithHeader "/tmp/tempdata.csv"
+    let newRF = Analyze.filter isComplete tempdata
+    let out = Analyze.encodeWithoutHeader newRF
+    let outH = Analyze.encodeWithHeader newRF
+    LazyByteString.writeFile output outH
+    LazyByteString.appendFile output out
   where
     prependPath file = datadir <> "/" <> header <> file <> ".csv"
+    isComplete _ _ _ els = not $ "NA" `Vector.elem` els
 
 
 
