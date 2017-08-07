@@ -8,6 +8,7 @@ On an Ubuntu system:
 After installing that, get into an `R` prompt and issue:
 
 `install.packages('data.table')`
+`install.packages('zoo')`
 
 
 ## Usage:
@@ -18,7 +19,7 @@ After installing that, get into an `R` prompt and issue:
 
 3. Execute `stack exec data-combinator -- <file extension to merge> --header <header of files>`, for example:
 
-    stack exec data-combinator -- csv --header 20.659698_-103.349609_170629_1754_00013_
+    `stack exec data-combinator -- csv --header 20.659698_-103.349609_170629_1754_00013_`
 
 > Note the trailing underscore.
 
