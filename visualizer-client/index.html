@@ -1,0 +1,270 @@
+<!doctype>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" />
+
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="./highcharts-downsample.js"></script>
+
+    <style>
+        html,
+        body {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        #chart_container {
+            margin: 0 auto;
+            width: 90%;
+        }
+
+        #chart {
+            height: 80%;
+        }
+
+        #x_axis {
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <input type="text" id="header-name" placeholder="Patient header">
+    <button id='load-data-button'>Load data</button>
+
+    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+    <script>
+        var globalData = [];
+        var headerName = "";
+        $(document).ready(function () {
+            const downsampleThreshold = 10;
+            var masterChart;
+            var detailChart;
+
+            function createDetail(masterChart) {
+                // create a detail chart referenced by a global variable
+                detailChart = Highcharts.chart('detail-container', {
+                    chart: {
+                        marginBottom: 120,
+                        reflow: false,
+                        marginLeft: 50,
+                        marginRight: 20,
+                        style: {
+                            position: 'absolute'
+                        }
+                    },
+                    credits: {
+                        enabled: false
+                    },
+                    title: {
+                        text: null
+                    },
+                    legend: {
+                        enabled: true,
+                        align: 'left',
+                        verticalAlign: 'top'
+                    },
+                    yAxis: {
+                        title: {
+                            text: null
+                        },
+                        maxZoom: 0.00002
+                    },
+                    tooltip: {
+                        formatter: function () {
+                            var s = [];
+
+                            $.each(this.points, function (i, point) {
+                                s.push('<span>' + point.series.name + ' : ' +
+                                    point.y + '<span>');
+                            });
+
+                            return s.join('<br>');
+                        },
+                        shared: true
+                    },
+                    plotOptions: {
+                        series: {
+                            marker: {
+                                enabled: false,
+                                states: {
+                                    hover: {
+                                        enabled: true,
+                                        radius: 3
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    series: [],
+
+                });
+            }
+
+            // create the master chart
+            function createMaster() {
+                masterChart = Highcharts.chart('master-container', {
+                    chart: {
+                        reflow: false,
+                        borderWidth: 0,
+                        backgroundColor: null,
+                        marginLeft: 50,
+                        marginRight: 20,
+                        zoomType: 'x',
+                        events: {
+
+                            // listen to the selection event on the master chart to update the
+                            // extremes of the detail chart
+                            selection: function (event) {
+                                var extremesObject = event.xAxis[0],
+                                    min = extremesObject.min,
+                                    max = extremesObject.max,
+                                    detailData = [],
+                                    xAxis = this.xAxis[0];
+
+                                while(detailChart.series.length > 0)
+                                    detailChart.series[0].remove(true);
+
+                                console.log(extremesObject)
+
+                                $.getJSON('http://localhost:8081/data/' + headerName + '/' + min + '/' + max + '', function (data) {
+                                    console.log(min)
+                                    console.log(max)
+                                    data.forEach(function (x) {
+                                        detailChart.addSeries({
+                                            name: x.name,
+                                            data: x.dataPoints
+                                        })
+                                    });
+                                });
+
+                                // move the plot bands to reflect the new detail span
+                                xAxis.removePlotBand('mask-before');
+                                xAxis.addPlotBand({
+                                    id: 'mask-before',
+                                    from: globalData[0].dataPoints[0][0],
+                                    to: min,
+                                    color: 'rgba(0, 0, 0, 0.2)'
+                                });
+
+                                xAxis.removePlotBand('mask-after');
+                                xAxis.addPlotBand({
+                                    id: 'mask-after',
+                                    from: max,
+                                    to: globalData[0].dataPoints[globalData[0].dataPoints.length - 1][0],
+                                    color: 'rgba(0, 0, 0, 0.2)'
+                                });
+
+
+                                return false;
+                            }
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    title: {
+                        text: null
+                    },
+                    yAxis: {
+                        gridLineWidth: 0,
+                        labels: {
+                            enabled: false
+                        },
+                        title: {
+                            text: null
+                        },
+                        showFirstLabel: false
+                    },
+                    tooltip: {
+                        formatter: function () {
+                            return false;
+                        }
+                    },
+                    credits: {
+                        enabled: false
+                    },
+                    plotOptions: {
+                        series: {
+                            fillColor: {
+                                linearGradient: [0, 0, 0, 70],
+                                stops: [
+                                    [0, Highcharts.getOptions().colors[0]],
+                                    [1, 'rgba(255,255,255,0)']
+                                ]
+                            },
+                            lineWidth: 1,
+                            marker: {
+                                enabled: false
+                            },
+                            shadow: false,
+                            states: {
+                                hover: {
+                                    lineWidth: 1
+                                }
+                            },
+                            enableMouseTracking: false
+                        }
+                    },
+
+                    series: [],
+
+                    exporting: {
+                        enabled: false
+                    }
+
+                }, function (masterChart) {
+                    createDetail(masterChart);
+                }); // return chart instance
+            }
+
+            function getData(headerName, columnName) {
+                $.getJSON('http://192.168.1.40:8081/data/' + headerName + '/0.0/600.0', function (data) {
+                    data.forEach(function (x) {
+                        masterChart.addSeries({
+                            name: x.name,
+                            data: x.dataPoints
+                        })
+                        detailChart.addSeries({
+                            name: x.name,
+                            data: x.dataPoints
+                        })
+                    });
+                    globalData = data;
+                });
+            }
+
+            function loadData() {
+                headerName = $('#header-name').val()
+                var columnName = 'y-axis (g)'
+                getData(headerName, columnName)
+            }
+
+            var $container = $('#container')
+                .css('position', 'relative');
+
+            $('<div id="detail-container">')
+                .css({
+                    height: 700,
+                    width: '100%'
+                })
+                .appendTo($container);
+
+            $('<div id="master-container">')
+                .css({
+                    //position: 'absolute',
+                    //top: 300,
+                    height: 100,
+                    width: '100%'
+                })
+                .appendTo($container);
+
+            createMaster();
+
+            $('#load-data-button').on('click', loadData);
+        });
+    </script>
+</body>
