@@ -21,22 +21,27 @@ import qualified Data.Vector as Vector
 import Data.Vector (Vector)
 import Data.Text (pack, unpack)
 import Control.Monad.IO.Class
+import Data.Function ((&))
 
+
+downsampleFactor :: Int
+downsampleFactor = 500
 
 type DataAPI
   = "data"
   :> Capture "header" String
-  :> Capture "variable" String
-  :> Capture "start" Int
-  :> Capture "end" Int
-  :> Get '[JSON] (Vector DataPoint)
+  :> Capture "start" Double
+  :> Capture "end" Double
+  :> Get '[JSON] (Vector DataSeries)
 
-data DataPoint = DataPoint
-  { x :: Double
-  , y :: Double
-  } deriving Generic
+type DataPoint = [Double]
 
-instance ToJSON DataPoint
+data DataSeries = DataSeries
+    { name :: String
+    , dataPoints :: Vector DataPoint
+    } deriving (Generic)
+
+instance ToJSON DataSeries
 
 dataAPI :: Proxy DataAPI
 dataAPI = Proxy
@@ -45,37 +50,41 @@ dataAPI = Proxy
 dataServer :: Server DataAPI
 dataServer = dataHandler
 
+downsample :: Int -> DataSeries -> DataSeries
+downsample threshold (DataSeries nm v) = DataSeries nm
+    ( v
+    & Vector.iterateN vLength (Vector.drop n)
+    & Vector.takeWhile vectorNotNull
+    & Vector.map Vector.head
+    )
+  where
+    vLength = Vector.length v
+    vectorNotNull = not . Vector.null
+    n = vLength `div` threshold
 
 
-dataHandler :: String -> String -> Int -> Int -> Handler (Vector DataPoint)
-dataHandler header variable start end = do
-    dbug $ "Got request for header " ++ header ++ " and variable " ++ variable
-    dbug "Loading CSV"
+dataHandler :: String -> Double -> Double -> Handler (Vector DataSeries)
+dataHandler header start end = do
     df <- liftIO $ Analyze.loadCSVFileWithHeader $ "../data/" ++ header ++ "combined.csv"
-    dbug "Getting elapsed time"
+    let dfKeys = Vector.take 9 $ Vector.drop 4 $ Analyze.rframeKeys df
     varElapsed <- liftIO $ Analyze.col "elapsed" df
-    dbug "Getting variable"
-    varCol <- liftIO $ Analyze.col variable' df
-    doubleElapsed <- do
-        dbug "Converting elapsed to double"
-        return ( Vector.map (read . traceId . unpack) varElapsed :: Vector Double )
-    doubleVariable <- do
-        dbug "Converting variable to double"
-        return ( Vector.map (read . traceId . unpack) varCol :: Vector Double )
-    dbug "Zipping and returning"
-    return $ Vector.zipWith DataPoint doubleElapsed doubleVariable
+    let doubleElapsed = Vector.map (read . unpack) varElapsed :: Vector Double
+    series <- liftIO $ Vector.mapM (serieColumn df doubleElapsed) dfKeys
+    return $ Vector.map (downsample downsampleFactor) $ getWindow start end series
   where
-    variable' = pack variable
-    dbug = liftIO . putStrLn
-
-
-f :: Double -> Double
-f x = (a * x^2) + b * x + c
-  where
-    a = 1.0
-    b = 1.0
-    c = (-2.0)
-
+      getWindow start end dataSeriesVector
+        = Vector.map (adjustDataSeries start end) dataSeriesVector
+      adjustDataSeries start end (DataSeries n dps) = DataSeries n
+          ( dps
+          & Vector.takeWhile (\(elapsedSeconds:_) -> elapsedSeconds < end)
+          & Vector.dropWhile (\(elapsedSeconds:_) -> elapsedSeconds < start)
+          )
+      serieColumn df doubleElapsed colName = do
+        varCol <- Analyze.col colName df
+        let doubleVariable = (Vector.map (read . unpack) varCol :: Vector Double)
+        return $ DataSeries
+            (unpack colName)
+            (Vector.zipWith (\a b -> [a,b]) doubleElapsed doubleVariable)
 
 main :: IO ()
 main = do
