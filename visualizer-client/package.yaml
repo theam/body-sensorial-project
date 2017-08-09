@@ -15,6 +15,9 @@ dependencies:
   - base >= 4.7 && < 5
   - miso >= 0.6 && < 1.0
 
+default-extensions:
+- OverloadedStrings
+
 executables:
   visualizer-client:
     source-dirs:      src

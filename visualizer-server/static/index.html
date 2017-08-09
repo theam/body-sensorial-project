@@ -5,7 +5,9 @@
 
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="./highcharts-downsample.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/86/three.min.js"></script>
+    <script src="CanvasRenderer.js"></script>
+    <script src="Projector.js"></script>
 
     <style>
         html,
@@ -34,10 +36,20 @@
     <input type="text" id="header-name" placeholder="Patient header">
     <button id='load-data-button'>Load data</button>
 
+    <div id="3d-sim" style="position: relative">
+        <div id="3d-sim-data" style="position: absolute; top: 0px; left: 0px;">
+            <p id="rotation">
+            </p>
+            <p id="position">
+            </p>
+        </div>
+        <div id="imu-container" style=""></div>
+    </div>
     <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
 
     <script>
         var globalData = [];
+        var currentSample = 0;
         var headerName = "";
         $(document).ready(function () {
             const downsampleThreshold = 10;
@@ -130,7 +142,7 @@
 
                                 console.log(extremesObject)
 
-                                $.getJSON('http://localhost:8081/data/' + headerName + '/' + min + '/' + max + '', function (data) {
+                                $.getJSON('/data/' + headerName + '/' + min + '/' + max + '', function (data) {
                                     console.log(min)
                                     console.log(max)
                                     data.forEach(function (x) {
@@ -222,7 +234,7 @@
             }
 
             function getData(headerName, columnName) {
-                $.getJSON('http://192.168.1.40:8081/data/' + headerName + '/0.0/600.0', function (data) {
+                $.getJSON('/data/' + headerName + '/0.0/600.0', function (data) {
                     data.forEach(function (x) {
                         masterChart.addSeries({
                             name: x.name,
@@ -234,6 +246,8 @@
                         })
                     });
                     globalData = data;
+                    init();
+                    runIMU();
                 });
             }
 
@@ -242,6 +256,131 @@
                 var columnName = 'y-axis (g)'
                 getData(headerName, columnName)
             }
+
+            let container;
+            let camera, scene, renderer;
+            let cube, plane, axes;
+            let targetRotation = 0;
+            let targetRotationOnMouseDown = 0;
+            let windowHalfX = window.innerWidth / 2;
+            let windowHalfY = window.innerHeight / 2;
+
+            function buildAxes( length ) {
+                function buildAxis( src, dst, colorHex, dashed ) {
+                        var geom = new THREE.Geometry(),
+                            mat;
+
+                        if(dashed) {
+                                mat = new THREE.LineDashedMaterial({ linewidth: 3, color: colorHex, dashSize: 3, gapSize: 3 });
+                        } else {
+                                mat = new THREE.LineBasicMaterial({ linewidth: 3, color: colorHex });
+                        }
+
+                        geom.vertices.push( src.clone() );
+                        geom.vertices.push( dst.clone() );
+                        geom.computeLineDistances(); // This one is SUPER important, otherwise dashed lines will appear as simple plain lines
+
+                        var axis = new THREE.Line( geom, mat, THREE.LinePieces );
+
+                        return axis;
+
+                }
+                    var axes = new THREE.Object3D();
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000, false ) ); // +X
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( -length, 0, 0 ), 0xFF0000, true) ); // -X
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, length, 0 ), 0x00FF00, false ) ); // +Y
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, -length, 0 ), 0x00FF00, true ) ); // -Y
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, length ), 0x0000FF, false ) ); // +Z
+                    axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, -length ), 0x0000FF, true ) ); // -Z
+                    return axes;
+            }
+
+            function init() {
+                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 2000 );
+                camera.position.x = 900;
+                camera.position.y = 350;
+                camera.position.z = 900;
+                camera.lookAt(new THREE.Vector3(0,0,0))
+                scene = new THREE.Scene();
+
+                var geometry = new THREE.BoxGeometry( 200, 20, 200 );
+
+                for( let i = 0; i < geometry.faces.length; i += 2 ) {
+                    var hex = Math.random() * 0xffffff
+                    geometry.faces[i].color.setHex(hex);
+                    geometry.faces[i+1].color.setHex(hex);
+                }
+
+                var material = new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors, overdraw: 0.5 } );
+
+                cube = new THREE.Mesh( geometry, material );
+                cube.position.y = 150;
+                scene.add(cube);
+
+                var geometry = new THREE.PlaneBufferGeometry( 2000, 2000 );
+                geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+                var material = new THREE.MeshBasicMaterial( { color: 0xe0e0e0, overdraw: 0.5 } );
+                plane = new THREE.Mesh( geometry, material );
+                scene.add(plane);
+
+                axes = buildAxes(1000);
+                scene.add(axes);
+
+                renderer = new THREE.CanvasRenderer();
+                renderer.setClearColor(0xf0f0f0);
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                document.getElementById('imu-container').appendChild( renderer.domElement );
+            }
+
+            function runIMU() {
+                let dataAccX = globalData[0].dataPoints[currentSample][1]
+                let dataAccY = globalData[1].dataPoints[currentSample][1]
+                let dataAccZ = globalData[2].dataPoints[currentSample][1]
+
+                let dataRollX = globalData[3].dataPoints[currentSample][1]
+                let dataRollY = globalData[4].dataPoints[currentSample][1]
+                let dataRollZ = globalData[5].dataPoints[currentSample][1]
+
+                let currentTime = globalData[0].dataPoints[currentSample][0]
+                let nextTime = globalData[0].dataPoints[currentSample + 1][0]
+                let delta = nextTime - currentTime
+
+                let de2ra = function (d) { return d*(Math.PI/180) }
+
+                if (currentSample == 0) {
+                    cube.rotation.x = 0
+                    cube.rotation.y = 0
+                    cube.rotation.z = 0
+                    cube.position.x = 0
+                    cube.position.y = 0
+                    cube.position.z = 0
+                } else {
+                    cube.rotation.x = de2ra(dataRollX * 1 * delta)
+                    cube.rotation.y = de2ra(dataRollY * 1 * delta)
+                    cube.rotation.z = de2ra(dataRollZ * 1 * delta)
+                    cube.position.x += dataAccX * delta * delta * 9.80665
+                    cube.position.y += dataAccY * delta * delta * 9.80665
+                    cube.position.z += dataAccZ * delta * delta * 9.80665
+                }
+                if (currentSample % 50 == 0) {
+                    $('#3d-sim-data #rotation').text(
+                        'Rotation: [' +
+                        ' X: ' + cube.rotation.x.toFixed(4) +
+                        ' Y: ' + cube.rotation.y.toFixed(4) +
+                        ' Z: ' + cube.rotation.z.toFixed(4) +
+                        ' ]')
+                    $('#3d-sim-data #position').text(
+                        'Position: [' +
+                        ' X: ' + cube.position.x.toFixed(1) +
+                        ' Y: ' + cube.position.y.toFixed(1) +
+                        ' Z: ' + cube.position.z.toFixed(1) +
+                        ' ]')
+                }
+                renderer.render( scene, camera );
+                currentSample = (currentSample + 1) % globalData[0].dataPoints.length
+                setTimeout(runIMU, 1)
+            }
+
 
             var $container = $('#container')
                 .css('position', 'relative');
@@ -266,5 +405,6 @@
 
             $('#load-data-button').on('click', loadData);
         });
+
     </script>
 </body>
