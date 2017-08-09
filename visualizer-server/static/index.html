@@ -36,16 +36,19 @@
     <input type="text" id="header-name" placeholder="Patient header">
     <button id='load-data-button'>Load data</button>
 
-    <div id="3d-sim" style="position: relative">
-        <div id="3d-sim-data" style="position: absolute; top: 0px; left: 0px;">
-            <p id="rotation">
-            </p>
-            <p id="position">
-            </p>
+    <div id="main-container" style="position: relative">
+        <div id="absolute-wrapper" style="position: absolute; top 50px; left: 0px; z-index: 10;">
+            <div id="3d-sim" style="position: relative">
+                <div id="3d-sim-data" style="position: absolute; top: 150px; left: 150px;">
+                    <p id="position">
+                    </p>
+                </div>
+                <div id="imu-container" style=""></div>
+            </div>
         </div>
-        <div id="imu-container" style=""></div>
+
+        <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
     </div>
-    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
 
     <script>
         var globalData = [];
@@ -271,9 +274,9 @@
                             mat;
 
                         if(dashed) {
-                                mat = new THREE.LineDashedMaterial({ linewidth: 3, color: colorHex, dashSize: 3, gapSize: 3 });
+                                mat = new THREE.LineDashedMaterial({ linewidth: 1, color: colorHex, dashSize: 3, gapSize: 3 });
                         } else {
-                                mat = new THREE.LineBasicMaterial({ linewidth: 3, color: colorHex });
+                                mat = new THREE.LineBasicMaterial({ linewidth: 1, color: colorHex });
                         }
 
                         geom.vertices.push( src.clone() );
@@ -297,9 +300,9 @@
 
             function init() {
                 camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 2000 );
-                camera.position.x = 900;
-                camera.position.y = 350;
-                camera.position.z = 900;
+                camera.position.x = 200;
+                camera.position.y = 50;
+                camera.position.z = 200;
                 camera.lookAt(new THREE.Vector3(0,0,0))
                 scene = new THREE.Scene();
 
@@ -314,70 +317,55 @@
                 var material = new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors, overdraw: 0.5 } );
 
                 cube = new THREE.Mesh( geometry, material );
-                cube.position.y = 150;
                 scene.add(cube);
 
-                var geometry = new THREE.PlaneBufferGeometry( 2000, 2000 );
-                geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
-                var material = new THREE.MeshBasicMaterial( { color: 0xe0e0e0, overdraw: 0.5 } );
-                plane = new THREE.Mesh( geometry, material );
-                scene.add(plane);
+                // var geometry = new THREE.PlaneBufferGeometry( 2000, 2000 );
+                // geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+                // var material = new THREE.MeshBasicMaterial( { color: 0xe0e0e0, overdraw: 0.5 } );
+                // plane = new THREE.Mesh( geometry, material );
+                // scene.add(plane);
 
                 axes = buildAxes(1000);
                 scene.add(axes);
 
-                renderer = new THREE.CanvasRenderer();
-                renderer.setClearColor(0xf0f0f0);
-                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer = new THREE.WebGLRenderer( { alpha: true , antialias: true} );
+                // renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setSize( 300, 200 );
                 document.getElementById('imu-container').appendChild( renderer.domElement );
             }
 
             function runIMU() {
-                let dataAccX = globalData[0].dataPoints[currentSample][1]
-                let dataAccY = globalData[1].dataPoints[currentSample][1]
-                let dataAccZ = globalData[2].dataPoints[currentSample][1]
-
-                let dataRollX = globalData[3].dataPoints[currentSample][1]
-                let dataRollY = globalData[4].dataPoints[currentSample][1]
-                let dataRollZ = globalData[5].dataPoints[currentSample][1]
-
+                let de2ra = function (d) { return d*(Math.PI/180) }
                 let currentTime = globalData[0].dataPoints[currentSample][0]
                 let nextTime = globalData[0].dataPoints[currentSample + 1][0]
-                let delta = nextTime - currentTime
+                let totalSamples = globalData[0].dataPoints.length
 
-                let de2ra = function (d) { return d*(Math.PI/180) }
-
-                if (currentSample == 0) {
+                if ( ( currentSample + 1 % totalSamples )== 0) {
+                    currentSample = 0
                     cube.rotation.x = 0
                     cube.rotation.y = 0
                     cube.rotation.z = 0
-                    cube.position.x = 0
-                    cube.position.y = 0
-                    cube.position.z = 0
                 } else {
+                    let dataRollX = globalData[3].dataPoints[currentSample][1]
+                    let dataRollY = globalData[4].dataPoints[currentSample][1]
+                    let dataRollZ = globalData[5].dataPoints[currentSample][1]
+
+                    let delta = nextTime - currentTime
+
                     cube.rotation.x = de2ra(dataRollX * 1 * delta)
                     cube.rotation.y = de2ra(dataRollY * 1 * delta)
                     cube.rotation.z = de2ra(dataRollZ * 1 * delta)
-                    cube.position.x += dataAccX * delta * delta * 9.80665
-                    cube.position.y += dataAccY * delta * delta * 9.80665
-                    cube.position.z += dataAccZ * delta * delta * 9.80665
                 }
-                if (currentSample % 50 == 0) {
-                    $('#3d-sim-data #rotation').text(
-                        'Rotation: [' +
-                        ' X: ' + cube.rotation.x.toFixed(4) +
-                        ' Y: ' + cube.rotation.y.toFixed(4) +
-                        ' Z: ' + cube.rotation.z.toFixed(4) +
-                        ' ]')
-                    $('#3d-sim-data #position').text(
-                        'Position: [' +
-                        ' X: ' + cube.position.x.toFixed(1) +
-                        ' Y: ' + cube.position.y.toFixed(1) +
-                        ' Z: ' + cube.position.z.toFixed(1) +
-                        ' ]')
-                }
+                $('#3d-sim-data #position').text('Elapsed: ' + currentTime.toFixed(2));
+                $('#absolute-wrapper').css(
+                            { top: 200,
+                              left: (Math.round((($(detailChart.container).width() - 110) * currentSample) / totalSamples) - 150 + 70) ,
+                              position: 'absolute',
+                              zIndex: '10'
+                            }
+                );
                 renderer.render( scene, camera );
-                currentSample = (currentSample + 1) % globalData[0].dataPoints.length
+                currentSample = (currentSample + 1) % totalSamples
                 setTimeout(runIMU, 1)
             }
 
