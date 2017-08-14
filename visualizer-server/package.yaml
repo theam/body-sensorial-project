@@ -22,6 +22,8 @@ dependencies:
   - analyze
   - vector
   - text
+  - array
+  - dsp
 
 executables:
   visualizer-server:
