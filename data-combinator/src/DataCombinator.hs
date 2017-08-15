@@ -101,7 +101,7 @@ combineFLAC datadir header = do
     deleteWavs
   where
     prependPath file = datadir <> "/" <> header <> file <> ".flac"
-    combineWavs = System.callCommand ( toList ("cd " <> datadir <> " && sox *.wav " <> header <> "combined.wav"))
+    combineWavs = System.callCommand ( toList ("cd " <> datadir <> " && sox *.wav " <> header <> "combined.wav rate 16k"))
     deleteWavs = System.callCommand ( toList ("cd " <> datadir <> " && rm -f *.flac.wav"))
 
 convertToWav :: String -> IO ()

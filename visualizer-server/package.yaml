@@ -12,7 +12,7 @@ extra-source-files:
 - README.md
 
 dependencies:
-  - base >= 4.7 && < 5
+  - base
   - servant
   - servant-server
   - aeson
@@ -24,6 +24,8 @@ dependencies:
   - text
   - array
   - dsp
+  - HCodecs
+  - split
 
 executables:
   visualizer-server:

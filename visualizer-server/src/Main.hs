@@ -12,6 +12,15 @@ module Main where
 import qualified Analyze
 import Control.Monad.IO.Class
 import Data.Aeson
+import Data.List.Split
+import Codec.Wav
+import Numeric.Transform.Fourier.FFT
+import Data.Complex
+import Data.Audio
+import Data.Array.IArray
+import qualified Data.Array as Array
+import Data.Monoid
+import Data.Int
 import Data.Function ((&))
 import Data.Text (pack, unpack)
 import qualified Data.Vector as Vector
@@ -33,6 +42,9 @@ type DataAPI
      :> Capture "start" Double
      :> Capture "end" Double
      :> Get '[ JSON] (Vector DataSeries)
+     :<|> "spectrum"
+     :> Capture "header" String
+     :> Get '[JSON] (Vector (Vector (Vector Double)))
      :<|> Raw
 
 type DataPoint = [Double]
@@ -49,6 +61,7 @@ dataAPI = Proxy
 
 dataServer :: Server DataAPI
 dataServer = dataHandler
+    :<|> spectrumHandler
     :<|> serveDirectoryFileServer "static"
 
 downsample :: Int -> DataSeries -> DataSeries
@@ -64,6 +77,23 @@ downsample threshold (DataSeries nm v) =
     vLength = Vector.length v
     vectorNotNull = not . Vector.null
     n = vLength `div` threshold
+
+
+spectrumHandler :: String -> Handler (Vector (Vector (Vector Double)))
+spectrumHandler header = do
+    Right snd <- liftIO . importFile $ "../data/" <> header <> "combined.wav" :: Handler (Either String (Audio Int16))
+    let x = sampleData snd
+          & elems
+          & chunksOf 1024
+          & fmap (Array.listArray (0,1023) . fmap toCpx)
+          & fmap fft
+          & fmap Array.elems
+          & fmap (\x -> Vector.fromList $ fmap (\y -> Vector.fromList [realPart y, imagPart y]) x)
+          & Vector.fromList
+    return x
+  where
+    toCpx x = fromIntegral x :+ 0.0 :: Complex Double
+
 
 dataHandler :: String -> Double -> Double -> Handler (Vector DataSeries)
 dataHandler header start end = do
