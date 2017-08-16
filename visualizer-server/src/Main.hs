@@ -18,6 +18,8 @@ import Numeric.Transform.Fourier.FFT
 import Data.Complex
 import Data.Audio
 import Data.Array.IArray
+import Data.List
+import Control.Applicative
 import qualified Data.Array as Array
 import Data.Monoid
 import Data.Int
@@ -44,7 +46,9 @@ type DataAPI
      :> Get '[ JSON] (Vector DataSeries)
      :<|> "spectrum"
      :> Capture "header" String
-     :> Get '[JSON] (Vector (Vector (Vector Double)))
+     :> Get '[JSON] SpectrumPoints
+     :<|> "audio"
+     :> Raw
      :<|> Raw
 
 type DataPoint = [Double]
@@ -56,12 +60,21 @@ data DataSeries = DataSeries
 
 instance ToJSON DataSeries
 
+data SpectrumPoints = SpectrumPoints
+    { xs :: [Double]
+    , ys :: [Double]
+    , zs :: [Double]
+    } deriving (Generic)
+
+instance ToJSON SpectrumPoints
+
 dataAPI :: Proxy DataAPI
 dataAPI = Proxy
 
 dataServer :: Server DataAPI
 dataServer = dataHandler
     :<|> spectrumHandler
+    :<|> serveDirectoryFileServer "../data"
     :<|> serveDirectoryFileServer "static"
 
 downsample :: Int -> DataSeries -> DataSeries
@@ -78,20 +91,24 @@ downsample threshold (DataSeries nm v) =
     vectorNotNull = not . Vector.null
     n = vLength `div` threshold
 
-
-spectrumHandler :: String -> Handler (Vector (Vector (Vector Double)))
+spectrumHandler :: String -> Handler SpectrumPoints
 spectrumHandler header = do
+    liftIO $ putStrLn "Called spectruhandler"
     Right snd <- liftIO . importFile $ "../data/" <> header <> "combined.wav" :: Handler (Either String (Audio Int16))
-    let x = sampleData snd
+    let sdata = sampleData snd
+    let x = sdata
           & elems
           & chunksOf 1024
           & fmap (Array.listArray (0,1023) . fmap toCpx)
           & fmap fft
           & fmap Array.elems
-          & fmap (\x -> Vector.fromList $ fmap (\y -> Vector.fromList [realPart y, imagPart y]) x)
-          & Vector.fromList
-    return x
+          & fmap2 (\y -> [realPart y, imagPart y])
+          & fmap (liftA2 (:) ([0..1023]))
+          & fmap transpose
+          & foldl (++) []
+    return $ SpectrumPoints (x !! 0) (x !! 1) (x !! 2)
   where
+    fmap2 = fmap . fmap
     toCpx x = fromIntegral x :+ 0.0 :: Complex Double
 
 
