@@ -20,6 +20,7 @@ dependencies:
   - transformers >= 0.5.2 && < 0.6
   - either >= 4.4 && < 5
   - text
+  - directory
   - exceptions
   - bytestring
   - process

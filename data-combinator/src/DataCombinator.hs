@@ -98,11 +98,12 @@ combineFLAC datadir header = do
     let fileNames = prependPath <$> soundFiles
     mapM_ convertToWav fileNames
     combineWavs
-    deleteWavs
+    deleteFlacWavs
   where
     prependPath file = datadir <> "/" <> header <> file <> ".flac"
-    combineWavs = System.callCommand ( toList ("cd " <> datadir <> " && sox *.wav " <> header <> "combined.wav rate 16k"))
-    deleteWavs = System.callCommand ( toList ("cd " <> datadir <> " && rm -f *.flac.wav"))
+    combineWavs = System.callCommand ( toList ("cd " <> datadir <> " && sox "<>header<>"*.wav " <> header <> "combined.wav rate 16k"))
+    deleteWavs = System.callCommand ( toList ("cd " <> datadir <> " && rm -f *.wav"))
+    deleteFlacWavs = System.callCommand ( toList ("cd " <> datadir <> " && rm -f *.flac.wav"))
 
 convertToWav :: String -> IO ()
 convertToWav file = System.callCommand ( toList ("ffmpeg -y -i \"" <> file <> "\" \"" <> file <> ".wav\"" ))

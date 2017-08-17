@@ -28,6 +28,12 @@
             width: 100% !important;
         }
 
+        #mark {
+            height: 30px;
+            width: 30px;
+            background-color: pink;
+        }
+
         #chart_container {
             margin: 0 auto;
             width: 90%;
@@ -100,13 +106,14 @@
     <div id="main-container" style="position: relative">
         <div class="row">
             <div id="absolute-wrapper" style="position: absolute; z-index: 10;">
-            <div id="3d-sim" style="position: relative">
-                <div id="3d-sim-data" style="position: absolute; top: 150px; left: 150px;">
-                    <p id="position">
-                    </p>
+                <div id="mark"></div>
+                <div id="3d-sim" style="position: relative">
+                    <div id="3d-sim-data" style="position: absolute; top: 150px; left: 150px;">
+                        <p id="position">
+                        </p>
+                    </div>
+                    <div id="imu-container" style=""></div>
                 </div>
-                <div id="imu-container" style=""></div>
-            </div>
             </div>
         </div>
         <div class="row">
@@ -448,30 +455,35 @@
                         cube.rotation.y = de2ra(dataRollY * 1 * delta)
                         cube.rotation.z = de2ra(dataRollZ * 1 * delta)
                     }
-                    $('#3d-sim-data #position').text('Elapsed: ' + currentTime.toFixed(2));
-                    $('#absolute-wrapper').css(
-                                { top: 200,
-                                  left: (Math.round((($(detailChart.container).width() - 110) * currentSample) / totalSamples) - 150 + 70) ,
-                                  position: 'absolute',
-                                  zIndex: '10'
-                                }
-                    );
-                    currentSample = (currentSample + 1) % totalSamples
+                    setPos(currentSample, totalSamples, currentTime);
+                    currentSample = (currentSample + 8) % totalSamples
                 }
                 renderer.render( scene, camera );
+            }
+
+            function setPos(currentSample, totalSamples, currentTime) {
+                let downscale = function (n, W) {
+                    let ratio = window.innerWidth / W;
+                    return ratio * n;
+                }
+                let halfFigureWidth = 150;
+                let halfFigureHeight = 100;
+                let rightMargin = 110;
+                let leftMargin = 70;
+
+                $('#3d-sim-data #position').text('Elapsed: ' + currentTime.toFixed(2));
+                $('#absolute-wrapper').css({
+                    top: 200,
+                    left: (Math.round((($(detailChart.container).width() - downscale(rightMargin, 1920)) * currentSample) / totalSamples) - halfFigureWidth + downscale(leftMargin, 1920)) ,
+                    position: 'absolute',
+                    zIndex: '10'
+                });
             }
 
             function reset(){
                  currentSample = 0;
                  let totalSamples = globalData[0].dataPoints.length
-                 $('#3d-sim-data #position').text('Elapsed: 0.00');
-                 $('#absolute-wrapper').css(
-                        { top: 200,
-                          left: (Math.round((($(detailChart.container).width() - 110) * currentSample) / totalSamples) - 150 + 70) ,
-                          position: 'absolute',
-                          zIndex: '10'
-                        }
-                 );
+                 setPos(currentSample, totalSamples, 0.0);
             }
 
 
