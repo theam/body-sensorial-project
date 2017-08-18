@@ -79,6 +79,11 @@
                     <i class="material-icons right" id="reset-button">skip_previous</i>
                 </a>
             </li>
+            <li>
+                Speed:
+                <input id="speed-slider" type="range" min="1" max="16">
+                <span id="speed-display">0</span>
+            </li>
         </ul>
     </div>
     </nav>
@@ -125,6 +130,7 @@
     </div>
 
     <script>
+        var speed = 0;
         var paused = true;
         var loaded = false;
         var globalData = [];
@@ -456,7 +462,7 @@
                         cube.rotation.z = de2ra(dataRollZ * 1 * delta)
                     }
                     setPos(currentSample, totalSamples, currentTime);
-                    currentSample = (currentSample + 8) % totalSamples
+                    currentSample = (currentSample + 1) % totalSamples
                 }
                 renderer.render( scene, camera );
             }

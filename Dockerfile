@@ -18,17 +18,17 @@ RUN set -x \
         sox \
         r-base \
         curl \
+        cabal-install \
+        pkg-config \
     && curl -sSL https://get.haskellstack.org/ | sh \
     && stack setup \
     && R -e "install.packages('data.table', repos='http://cran.rstudio.com/')" \
     && R -e "install.packages('zoo', repos='http://cran.rstudio.com/')" \
     && cd data-combinator \
     && stack build \
-    && stack install cabal-install \
-    && stack exec data-combinator -- all \
     && cd ../visualizer-server \
     && stack build
 
 EXPOSE 8081
 
-CMD ["cd visualizer-server && stack exec visualizer-server"]
+CMD ["cd /app/data-combinator && stack exec data-combinator -- all && cd /app/visualizer-server && stack exec visualizer-server"]
