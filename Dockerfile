@@ -31,4 +31,4 @@ RUN set -x \
 
 EXPOSE 8081
 
-CMD ["cd /app/data-combinator && /usr/local/bin/stack exec data-combinator -- all && cd /app/visualizer-server && stack exec visualizer-server"]
+CMD ["cd /app/data-combinator && /usr/local/bin/stack exec data-combinator -- all && cd /app/visualizer-server && /usr/local/bin/stack exec visualizer-server"]
