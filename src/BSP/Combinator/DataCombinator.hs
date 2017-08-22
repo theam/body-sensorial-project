@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
-module DataCombinator where
+{-# LANGUAGE NoImplicitPrelude #-}
+module BSP.Combinator.DataCombinator where
 
 import Foundation
 import Foundation.Collection

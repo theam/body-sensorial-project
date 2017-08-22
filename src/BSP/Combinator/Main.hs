@@ -1,4 +1,5 @@
-module Main where
+{-# LANGUAGE NoImplicitPrelude #-}
+module BSP.Combinator.Main where
 
 import qualified Prelude
 import Foundation
@@ -10,7 +11,7 @@ import qualified Data.Text as Text
 import Options.Applicative.Simple
 import System.Directory
 
-import qualified DataCombinator
+import qualified BSP.Combinator.DataCombinator as DataCombinator
 
 main :: IO ()
 main = do
@@ -22,11 +23,11 @@ main = do
       (pure ()) $ do
         addCommand "csv"
                    "Combine multiple CSV files from a patient into a single one"
-                   (combineCSV "../data")
+                   (combineCSV "data")
                    (strOption (long "header"))
         addCommand "flac"
                    "Combine multiple FLAC files from a patient into a single WAV"
-                   (combineFLAC "../data")
+                   (combineFLAC "data")
                    (strOption (long "header"))
         addCommand "all"
                    "Check for available headers and run combine csv and flac for them all"
@@ -40,13 +41,13 @@ combineFLAC dataDir filesHeader = DataCombinator.combineFLAC (fromList dataDir) 
 
 combineAll :: IO ()
 combineAll = do
-    files <- listDirectory $ fromList "../data"
+    files <- listDirectory $ fromList "data"
     let headers = files
                 & fmap (getPrefix . Text.pack)
                 & filter (/= "")
                 & fmap Text.unpack
-    Prelude.mapM_ (combineCSV "../data") headers
-    Prelude.mapM_ (combineFLAC "../data") headers
+    Prelude.mapM_ (combineCSV "data") headers
+    Prelude.mapM_ (combineFLAC "data") headers
   where
     getPrefix t
         = case Text.breakOn "acc" t of
