@@ -8,7 +8,7 @@
 4. Attach yourself to the docker container: `docker run -it --entrypoint=/bin/bash bsp`
 5. Combine the data files: `cd /app/data-combinator && stack exec data-combinator -- all`
 6. Run the server: `cd /app/visualizer-server && stack exec visualizer-server`
-7. From a browser access the visualizer URL `http://localhost:8080`
+7. From a browser access the visualizer URL `http://localhost:8081`
 
 ## Manual installation on OSX
 
