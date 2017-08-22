@@ -34,6 +34,8 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.Cors
 import Servant
 import Servant.API
+import System.Environment
+import qualified BSP.Combinator.Main as Combinator
 
 downsampleFactor :: Int
 downsampleFactor = 5000
@@ -74,7 +76,7 @@ dataAPI = Proxy
 dataServer :: Server DataAPI
 dataServer = dataHandler
     :<|> spectrumHandler
-    :<|> serveDirectoryFileServer "../data"
+    :<|> serveDirectoryFileServer "data"
     :<|> serveDirectoryFileServer "static"
 
 downsample :: Int -> DataSeries -> DataSeries
@@ -94,7 +96,7 @@ downsample threshold (DataSeries nm v) =
 spectrumHandler :: String -> Handler SpectrumPoints
 spectrumHandler header = do
     liftIO $ putStrLn "Called spectruhandler"
-    Right snd <- liftIO . importFile $ "../data/" <> header <> "combined.wav" :: Handler (Either String (Audio Int16))
+    Right snd <- liftIO . importFile $ "data/" <> header <> "combined.wav" :: Handler (Either String (Audio Int16))
     let sdata = sampleData snd
     let x = sdata
           & elems
@@ -115,7 +117,7 @@ spectrumHandler header = do
 dataHandler :: String -> Double -> Double -> Handler (Vector DataSeries)
 dataHandler header start end = do
     df <- liftIO $
-        Analyze.loadCSVFileWithHeader $ "../data/" ++ header ++ "combined.csv"
+        Analyze.loadCSVFileWithHeader $ "data/" ++ header ++ "combined.csv"
     let dfKeys = Vector.take 9 $ Vector.drop 4 $ Analyze.rframeKeys df
     varElapsed <- liftIO $ Analyze.col "elapsed" df
     let doubleElapsed = Vector.map (read . unpack) varElapsed :: Vector Double
@@ -144,7 +146,12 @@ dataHandler header start end = do
 
 main :: IO ()
 main = do
-    putStrLn "Running server"
-    run 8081 app
+    args <- getArgs
+    case args of
+        [] -> runServer
+        _ -> Combinator.main
   where
+    runServer = do
+        putStrLn "Running server"
+        run 8081 app
     app = serve dataAPI dataServer
