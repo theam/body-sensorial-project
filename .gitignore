@@ -2,3 +2,4 @@ data/*.wav
 data/*.csv
 data/*.flac
 result
+segmentation/.stack-work
