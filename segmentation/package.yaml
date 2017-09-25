@@ -12,6 +12,11 @@ extra-source-files:
 
 dependencies:
   - base >= 4.6 && < 5
+  - array
+  - dsp
+  - plotlyhs
+  - hsndfile
+  - hsndfile-storablevector
 ##########################################
 # HASKELL.DO DEPENDENCIES, DO NOT REMOVE #
 ##########################################

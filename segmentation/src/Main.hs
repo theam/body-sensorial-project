@@ -2,12 +2,25 @@
 ```haskell hide top
 import Inliterate.Import
 ```
+
 # Segmentation
 This module comprises the segmentation part of the preprocessing of the data, applying whats
 described in the paper
 
 > **Automatic segmentation of Phonocardiogram using the occurrence of the cardiac events**
 > *Vishwanath et al., 2017*
+
+*Required libraries*:
+
+```haskell top
+import Data.Complex                  as Complex
+import Data.Array                    as Array
+import DSP.Basic				     as DSP
+import DSP.Filter.IIR.IIR            as DSP
+import DSP.Filter.IIR.Design         as DSP
+import Numeric.Transform.Fourier.FFT as FFT
+import Graphics.Plotly			     as Plotly
+```
 
 ## 1. Process
 
@@ -16,27 +29,23 @@ The process that is described in the paper can be mapped to the following commut
 $$\require{AMScd}$$
 
 $$\begin{CD}
-Noisy Sound @>prefilter>> Filtered Sound @>stft>> Spectrogram\\\\
+Noisy Sound @>prefilter>> Filtered Sound @>makeSpectrogram>> Spectrogram\\\\
 @. @. @VV{barkscale}V\\\\
 Event Detection Function @<loudnessEvaluation<< SmoothSpectrogram @<smoothen<< BarkScaled Spectrogram
 \end{CD}$$
 
 
 The [classes](https://en.wikipedia.org/wiki/Class_(set_theory))
-in this commutative diagram can be represented directly as data types in Haskell:
+in this commutative diagram can be represented directly as newtypes in Haskell:
 
 ```haskell top
-data NoisySound'
-data FilteredSound'
-data Spectrogram'
-data BarkScaledSpectrogram'
-data SmoothSpectrogram'
-data EventDetectionFunction'
+newtype NoisySound             = NoisySound [Double]
+newtype FilteredSound          = FilteredSound [Double]
+newtype Spectrogram            = Spectrogram [Array Int Double]
+newtype BarkScaledSpectrogram  = BarkScaledSpectrogram (Array Int Double)
+newtype SmoothSpectrogram      = SmoothSpectrogram (Array Int Double)
+newtype EventDetectionFunction = EventDetectionFunction (Array Int Double)
 ```
-
-These are [Tags](https://hackage.haskell.org/package/tagged-0.8.5/docs/Data-Tagged.html)
-that will be used for the definition of our format underneath. They help us not being
-constrained to any kind of format (`Vector`, `Array`, `ByteString`, etc...).
 
 The [morphisms](https://en.wikipedia.org/wiki/Morphism) represented in the diagram are functions
 that would transform the data in some way:
@@ -60,4 +69,52 @@ can automate the segmentation of the next sounds.
 
 ## 2. Implementation
 
-We will be 
+To implement the `prefilter` function, we can use the `dsp` package that comes with many
+nice DSP functions that are helpful here.
+
+```haskell top
+prefilter :: NoisySound -> FilteredSound
+prefilter (NoisySound ns) = FilteredSound filteredSound
+  where
+  	wp = 0.5
+    rp = 0.05
+    ws = 0
+    rs = 0.05
+    (b, a) = DSP.chebyshev1Lowpass (wp, rp) (ws, rs)
+    filteredSound = DSP.iir_df2 (b, a) ns
+```
+
+
+Now we can proceed to define `makeSpectrogram`, but first we need to separate all of our
+samples in frames, and get their magnitudes:
+
+```haskell top
+getFrames :: Array Int Double -> Int -> Int -> [Array Int Double]
+getFrames inArr frameSize hop =
+     [getFrame inArr start frameSize | start <- [0, hop .. l-1]]
+   where
+     (_,l) = Array.bounds inArr
+ 
+getFrame :: Array Int Double -> Int -> Int -> Array Int Double
+getFrame inVect start len =
+	DSP.pad slice len
+  where
+    slice = Array.ixmap (0, l - 1) (+ start) inVect
+    l = min len (end - start)
+    (_,end) = Array.bounds inVect
+
+getFrameMagnitude :: Array Int (Complex Double) -> Array Int Double
+getFrameMagnitude frame =
+		Array.array (0,(l-1) `div` 2) 
+        	[(i,log (magnitude (frame!(i+(l-1) `div` 2)) + 1))
+            	| i <- [0..((l-1) `div` 2)]]
+ 	where
+ 		(_,l) = Array.bounds frame
+
+makeSpectrogram :: FilteredSound -> Spectrogram
+makeSpectrogram (FilteredSound fs) = Spectrogram spectrogram
+  where
+    fsArray = Array.array (0, length fs) [(i, fs !! i) | i <- [0..length fs]]
+    spectrogram = map (getFrameMagnitude . rfft) (getFrames fsArray 1024 512)
+```
+
