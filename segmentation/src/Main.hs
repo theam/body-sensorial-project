@@ -16,6 +16,7 @@ described in the paper
 import Data.Complex                  as Complex
 import Data.Array                    as Array
 import DSP.Basic				     as DSP
+import DSP.Window				     as DSP
 import DSP.Filter.IIR.IIR            as DSP
 import DSP.Filter.IIR.Design         as DSP
 import Numeric.Transform.Fourier.FFT as FFT
@@ -42,9 +43,9 @@ in this commutative diagram can be represented directly as newtypes in Haskell:
 newtype NoisySound             = NoisySound [Double]
 newtype FilteredSound          = FilteredSound [Double]
 newtype Spectrogram            = Spectrogram [Array Int Double]
-newtype BarkScaledSpectrogram  = BarkScaledSpectrogram (Array Int Double)
-newtype SmoothSpectrogram      = SmoothSpectrogram (Array Int Double)
-newtype EventDetectionFunction = EventDetectionFunction (Array Int Double)
+newtype BarkScaledSpectrogram  = BarkScaledSpectrogram [Array Int Double]
+newtype SmoothSpectrogram      = SmoothSpectrogram [Array Int Double]
+newtype EventDetectionFunction = EventDetectionFunction [Double]
 ```
 
 The [morphisms](https://en.wikipedia.org/wiki/Morphism) represented in the diagram are functions
@@ -53,13 +54,8 @@ that would transform the data in some way:
 1. `prefilter` would apply a [Chebyshev type I Lowpass filter](https://en.wikipedia.org/wiki/Chebyshev_filter)
 2. An `stft` would be applied to all the `FilteredSound` using a *3ms* [Hann Window](https://en.wikipedia.org/wiki/Window_function#Cosine-sum_windows)
 3. `barkscale` scales the `Spectrogram` using a [Bark scale](https://en.wikipedia.org/wiki/Bark_scale)
-4. `smoothen` convolves each of the frequency bands using a *200ms* Hamming window (raised cosine).
-5. `loudnessEvaluation` sums all the amplitudes of all frequency bands:
-
-	$$ L_{dB}(t) = \frac{\sum_{k=1}{N}E_k}{N} $$
-
-	where \\(E_k\\) represents the magnitude of the kth frequency band in the spectrogram.
-	There are \\(N\\) of them.
+4. `smoothen` convolves each of the frequency bands using a *200ms* Hanning window.
+5. `loudnessEvaluation` sums all the amplitudes of all frequency bands
 6. Now we convolute the loudness with a *300ms* Hamming window, so we obtain a smoothed loudness
 	index function, where positive peaks are **onsets**, and negative ones are **offsets**
     
@@ -110,7 +106,11 @@ getFrameMagnitude frame =
             	| i <- [0..((l-1) `div` 2)]]
  	where
  		(_,l) = Array.bounds frame
+```
 
+Now, we define our `makeSpectrogram` function easily:
+
+```haskell top
 makeSpectrogram :: FilteredSound -> Spectrogram
 makeSpectrogram (FilteredSound fs) = Spectrogram spectrogram
   where
@@ -118,3 +118,49 @@ makeSpectrogram (FilteredSound fs) = Spectrogram spectrogram
     spectrogram = map (getFrameMagnitude . rfft) (getFrames fsArray 1024 512)
 ```
 
+To make the `barkscale` function we just have to apply the following function to each
+of the frequencies in our `Spectrogram`:
+
+$$ z(f) = 13\ arctan(0.00076f)+3.5arctan(\frac{f}{7500^2}) $$
+
+```haskell top
+barkscaleFrequency :: Double -> Double
+barkscaleFrequency f = 13.0 * atan (0.00076 * f) + 3.5 * atan (f/(7500^2))
+```
+
+For scaling our spectrogram, it is a matter of applying the function two levels deep
+elementwise using `fmap`:
+
+```haskell top
+barkscale :: Spectrogram -> BarkScaledSpectrogram
+barkscale (Spectrogram s) =
+	BarkScaledSpectrogram $ (fmap . fmap) barkscaleFrequency s
+```
+
+Let's smoothen the spectrogram by using a hann window:
+
+```haskell top
+smoothen :: BarkScaledSpectrogram -> SmoothSpectrogram
+smoothen (BarkScaledSpectrogram s) =
+	SmoothSpectrogram $ fmap (DSP.window (DSP.hanning 1024)) s
+```
+
+To evaluate loudness we just have to take each of the frequency bands and sum it all:
+
+$$ L_{dB}(t) = \frac{\sum_{k=1}{N}E_k}{N} $$
+
+where \\(E_k\\) represents the magnitude of the kth frequency band in the spectrogram.
+There are \\(N\\) of them.
+
+```haskell top
+loudnessEvaluation :: SmoothSpectrogram -> EventDetectionFunction
+loudnessEvaluation (SmoothSpectrogram s) =
+	EventDetectionFunction $ result
+  where
+    freqBandSum k = (foldl (+) 0 k) / (fromIntegral $ length s)
+    result = fmap freqBandSum s
+```
+
+## 3. Testing
+
+We can now proceed to test everything with some sample:
