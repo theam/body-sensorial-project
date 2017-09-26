@@ -2,10 +2,10 @@
 ```haskell hide top
 import Inliterate.Import
 ```
-
 ```html_header
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 ```
+
 # Segmentation
 This module comprises the segmentation part of the preprocessing of the data, applying whats
 described in the paper
@@ -28,8 +28,12 @@ import DSP.Filter.IIR.Design         as DSP
 import Numeric.Transform.Fourier.FFT as FFT
 import Graphics.Plotly			     as Plotly
 import Graphics.Plotly.Lucid	     as Plotly
+import Lucid						 as Lucid
+import qualified Data.Text           as Text
 import Data.StorableVector (Vector)
 import Data.Function ((&))
+import Data.Text (Text)
+import Data.Monoid
 ```
 
 ## 1. Process
@@ -123,7 +127,7 @@ Now, we define our `makeSpectrogram` function easily:
 makeSpectrogram :: FilteredSound -> Spectrogram
 makeSpectrogram (FilteredSound fs) = Spectrogram spectrogram
   where
-    fsArray = Array.array (0, length fs) [(i, fs !! i) | i <- [0..length fs]]
+    fsArray = Array.array (0, length fs) [(i, fs !! i) | i <- [0..(length fs)]]
     spectrogram = map (getFrameMagnitude . rfft) (getFrames fsArray 1024 512)
 ```
 
@@ -194,16 +198,16 @@ arrSnd <- readWavFile "resources/heartbeat.wav"
 Now, let's try plotting the loudnessEvaluation function for it:
 
 ```haskell top
-plotData :: SmoothSpectrogram -> String
-plotData (SmoothSpectrogram arr) = "Plotly.newPlot('div1'," ++ data' ++ ")"
+plotData :: SmoothSpectrogram -> Text
+plotData (SmoothSpectrogram arr) = "Plotly.newPlot('div1'," <> data' <> ");"
   where
   	toList = foldl (\a b -> a ++ [b]) []
     data' = "[{z:"
-    	 ++ show (map toList arr)
-         ++ "type: 'heatmap'"
-         ++ "}];"
+    	 <> Text.pack (show (map toList arr))
+         <> ",type: 'heatmap'"
+         <> "}];"
 ```
 
 ```haskell eval
-"hi"
+let BarkScaledSpectrogram p = FilteredSound arrSnd & makeSpectrogram & barkscale in script_ (plotData $ SmoothSpectrogram p) :: Html ()
 ```

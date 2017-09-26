@@ -10,6 +10,11 @@ category:            DataScience
 extra-source-files:
 - README.md
 
+default-extensions:
+  - OverloadedStrings
+  - TemplateHaskell
+  - ExtendedDefaultRules
+
 dependencies:
   - base >= 4.6 && < 5
   - array
@@ -19,6 +24,7 @@ dependencies:
   - hsndfile
   - hsndfile-storablevector
   - lucid
+  - text
 ##########################################
 # HASKELL.DO DEPENDENCIES, DO NOT REMOVE #
 ##########################################
