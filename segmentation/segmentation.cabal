@@ -26,8 +26,10 @@ executable run-test
     , array
     , dsp
     , plotlyhs
+    , storablevector
     , hsndfile
     , hsndfile-storablevector
+    , lucid
     , inliterate
     , lucid-extras
   default-language: Haskell2010

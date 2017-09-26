@@ -15,8 +15,10 @@ dependencies:
   - array
   - dsp
   - plotlyhs
+  - storablevector
   - hsndfile
   - hsndfile-storablevector
+  - lucid
 ##########################################
 # HASKELL.DO DEPENDENCIES, DO NOT REMOVE #
 ##########################################

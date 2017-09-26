@@ -3,6 +3,9 @@
 import Inliterate.Import
 ```
 
+```html_header
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+```
 # Segmentation
 This module comprises the segmentation part of the preprocessing of the data, applying whats
 described in the paper
@@ -13,14 +16,20 @@ described in the paper
 *Required libraries*:
 
 ```haskell top
+import Sound.File.Sndfile            as Snd
+import Sound.File.Sndfile.Buffer.StorableVector as BV
 import Data.Complex                  as Complex
 import Data.Array                    as Array
+import qualified Data.StorableVector as Vector
 import DSP.Basic				     as DSP
 import DSP.Window				     as DSP
 import DSP.Filter.IIR.IIR            as DSP
 import DSP.Filter.IIR.Design         as DSP
 import Numeric.Transform.Fourier.FFT as FFT
 import Graphics.Plotly			     as Plotly
+import Graphics.Plotly.Lucid	     as Plotly
+import Data.StorableVector (Vector)
+import Data.Function ((&))
 ```
 
 ## 1. Process
@@ -163,4 +172,38 @@ loudnessEvaluation (SmoothSpectrogram s) =
 
 ## 3. Testing
 
-We can now proceed to test everything with some sample:
+We can now proceed to test everything with some sample. Let's add some utility functions
+to load up a `wav` file:
+
+```haskell top
+readWavFile :: String -> IO [Double]
+readWavFile fileName = do
+	handle <- Snd.openFile fileName Snd.ReadMode Snd.defaultInfo
+	(info, Just buf) <- Snd.hGetContents handle :: IO (Snd.Info, Maybe (BV.Buffer Double))
+	return (toList $ BV.fromBuffer buf)
+  where
+  	toList = Vector.foldl (\a b -> a ++ [b]) []
+```
+
+Let's load our test file:
+
+```haskell do
+arrSnd <- readWavFile "resources/heartbeat.wav"
+```
+
+Now, let's try plotting the loudnessEvaluation function for it:
+
+```haskell top
+plotData :: SmoothSpectrogram -> String
+plotData (SmoothSpectrogram arr) = "Plotly.newPlot('div1'," ++ data' ++ ")"
+  where
+  	toList = foldl (\a b -> a ++ [b]) []
+    data' = "[{z:"
+    	 ++ show (map toList arr)
+         ++ "type: 'heatmap'"
+         ++ "}];"
+```
+
+```haskell eval
+"hi"
+```
