@@ -85,10 +85,10 @@ nice DSP functions that are helpful here.
 prefilter :: NoisySound -> FilteredSound
 prefilter (NoisySound ns) = FilteredSound filteredSound
   where
-  	wp = 0.5
-    rp = 0.05
-    ws = 0
-    rs = 0.05
+  	wp = 0.01
+    rp = 1.0
+    ws = 0.0111
+    rs = 42
     (b, a) = DSP.chebyshev1Lowpass (wp, rp) (ws, rs)
     filteredSound = DSP.iir_df2 (b, a) ns
 ```

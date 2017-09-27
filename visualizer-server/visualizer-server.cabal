@@ -10,7 +10,7 @@ author:         Theam
 maintainer:     nick@theam.io
 copyright:      2017 Theam
 license:        BSD3
-license-file:   LICENSE.md
+license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
 

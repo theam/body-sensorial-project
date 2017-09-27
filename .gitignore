@@ -1,5 +1,5 @@
-data/*.wav
-data/*.csv
-data/*.flac
+visualizer-server/data/*.wav
+visualizer-server/data/*.csv
+visualizer-server/data/*.flac
 result
 segmentation/.stack-work
