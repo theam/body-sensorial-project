@@ -1,0 +1,43 @@
+
+name:                segmentation
+version:             0.1.0.0
+homepage:            https://github.com/theam/segmentation#readme
+license:             BSD3
+author:              Theam
+maintainer:          nick@theam.io
+copyright:           2017 Theam
+category:            DataScience
+extra-source-files:
+- README.md
+
+default-extensions:
+  - OverloadedStrings
+  - TemplateHaskell
+  - ExtendedDefaultRules
+
+dependencies:
+  - base >= 4.6 && < 5
+  - array
+  - dsp
+  - plotlyhs
+  - storablevector
+  - hsndfile
+  - hsndfile-storablevector
+  - lucid
+  - text
+##########################################
+# HASKELL.DO DEPENDENCIES, DO NOT REMOVE #
+##########################################
+  - inliterate
+  - lucid-extras
+##########################################
+
+
+executables:
+##########################################
+# HASKELL.DO RENDERING, DO NOT REMOVE    #
+##########################################
+  run-test:
+    source-dirs:      src
+    main:             Main.hs
+##########################################

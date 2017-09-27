@@ -1,0 +1,18 @@
+resolver: lts-8.13
+
+packages:
+- location: '.'
+- extra-dep: true
+  location:
+    git: 'https://github.com/filopodia/open.git'
+    commit: '387683d052c370cd010827048fc75649e9590447'
+  subdirs:
+    - plotlyhs
+    - lucid-extras
+
+extra-deps:
+- inliterate-0.1.0
+- text-1.2.2.1
+- hsndfile-storablevector-0.5.2
+flags: {}
+extra-package-dbs: []
