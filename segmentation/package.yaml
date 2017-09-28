@@ -19,25 +19,14 @@ dependencies:
   - base >= 4.6 && < 5
   - array
   - dsp
-  - plotlyhs
   - storablevector
   - hsndfile
   - hsndfile-storablevector
-  - lucid
   - text
-##########################################
-# HASKELL.DO DEPENDENCIES, DO NOT REMOVE #
-##########################################
-  - inliterate
-  - lucid-extras
-##########################################
+  - pyfi
 
 
 executables:
-##########################################
-# HASKELL.DO RENDERING, DO NOT REMOVE    #
-##########################################
   run-test:
     source-dirs:      src
     main:             Main.hs
-##########################################

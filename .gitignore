@@ -3,3 +3,4 @@ visualizer-server/data/*.csv
 visualizer-server/data/*.flac
 result
 segmentation/.stack-work
+segmentation/pybits/*.pyc
