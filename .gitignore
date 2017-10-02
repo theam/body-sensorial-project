@@ -4,3 +4,6 @@ visualizer-server/data/*.flac
 result
 segmentation/.stack-work
 segmentation/pybits/*.pyc
+segmentation/pybits/.ipynb_checkpoints/
+segmentation/pybits/*.wav
+segmentation/pybits/slices/*.wav
