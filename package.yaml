@@ -1,0 +1,40 @@
+name:                body-sensorial-project
+version:             0.1.0.0
+synopsis:            bsp
+description:         Please see README.md
+homepage:            https://github.com/theam/body-sensorial-project#readme
+license:             Apache-2.0
+author:              Theam
+maintainer:          nick@theam.io
+copyright:           2017 Theam
+category:            Web
+
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+# DashboardServer
+  - aeson
+  - analyze
+  - servant
+  - servant-server
+  - split
+  - text
+  - vector
+  - wai
+  - warp
+# DataCombinator
+  - bytestring
+  - directory
+  - optparse-generic
+  - process
+
+ghc-options:
+    - -Wall
+    - -Werror
+
+executables:
+  bsp:
+    source-dirs:      src
+    main:             Main.hs

@@ -1,9 +1,27 @@
-visualizer-server/data/*.wav
-visualizer-server/data/*.csv
-visualizer-server/data/*.flac
-result
-segmentation/.stack-work
-segmentation/pybits/*.pyc
-segmentation/pybits/.ipynb_checkpoints/
-segmentation/pybits/*.wav
-segmentation/pybits/slices/*.wav
+### Haskell ###
+dist
+dist-*
+cabal-dev
+*.o
+*.hi
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+.hpc
+.hsenv
+.cabal-sandbox/
+cabal.sandbox.config
+*.prof
+*.aux
+*.hp
+*.eventlog
+.stack-work/
+cabal.project.local
+*.cabal
+.HTF/
+
+### Resources ###
+resources/data/*.csv
+resources/data/*.flac
+resources/data/*.wav
